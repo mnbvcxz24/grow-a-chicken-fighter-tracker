@@ -122,12 +122,17 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
+  .table-scroll {
+    overflow-x: auto;
+    border-radius: 12px;
+    background: #171922;
+  }
   table {
     width: 100%;
+    min-width: 380px;
     border-collapse: collapse;
     background: #171922;
     border-radius: 12px;
-    overflow: hidden;
     font-size: 14px;
   }
   th {
@@ -139,10 +144,16 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
     background: #1c1e28;
+    white-space: nowrap;
   }
   td {
     padding: 10px 14px;
     border-top: 1px solid #22242e;
+    white-space: nowrap;
+  }
+  @media (max-width: 400px) {
+    table { font-size: 13px; }
+    th, td { padding: 8px 10px; }
   }
   tr.row-live td { background: rgba(46, 204, 113, 0.08); }
   tr.row-upcoming td { background: rgba(243, 156, 18, 0.06); }
@@ -255,17 +266,19 @@
   </div>
 
   <h2>Next 1 hour schedule</h2>
-  <table>
-    <thead>
-      <tr><th>PH time</th><th>Status</th><th>Event</th></tr>
-    </thead>
-    <tbody id="schedule-body"></tbody>
-  </table>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>PH time</th><th>Status</th><th>Event</th></tr>
+      </thead>
+      <tbody id="schedule-body"></tbody>
+    </table>
+  </div>
 
   <h2>Notifications</h2>
   <div class="notify-panel">
     <button class="notify-enable-btn" id="notify-enable-btn">Enable notifications</button>
-    <div class="notify-status" id="notify-status">Pick which events you want a heads-up for before they go live</div>
+    <div class="notify-status" id="notify-status">Pick which events you want a heads-up for — only works while the app is open</div>
     <div id="notify-rows"></div>
   </div>
 
@@ -277,13 +290,14 @@ const EVENTS = [
   { name: "UFO invasion", emoji: "🛸" },
   { name: "Chicken boss", emoji: "🐔" },
   { name: "Golden goose", emoji: "🐤" },
-  { name: "Hot egg", emoji: "🍳" }
+  { name: "Hot egg", emoji: "🐣" }
 ];
 const ANCHOR_MIN = 17 * 60; // 5:00 PM anchor = start of UFO invasion
 const CYCLE = 40; // minutes
 const UPCOMING_OFFSET = 3; // minutes into the block before it switches to UPCOMING
 
-// In-memory only (resets on reload) — notification picks per event index
+// In-memory only (resets on reload) — notification picks per event index.
+// Notifications only fire while this app/tab is open (not fully closed).
 const notifyFor = [false, false, false, false];
 let lastIsLive = null;
 let lastLiveIndex = null;
@@ -341,7 +355,7 @@ function updateNotifyStatusUI() {
   if (perm === 'granted') {
     btn.disabled = true;
     btn.textContent = 'Notifications enabled ✓';
-    status.textContent = 'Pick which events you want a heads-up for before they go live';
+    status.textContent = 'Pick which events you want a heads-up for — only works while the app is open';
   } else if (perm === 'denied') {
     btn.disabled = true;
     btn.textContent = 'Notifications blocked';
@@ -424,7 +438,8 @@ function update() {
     document.getElementById('upcoming-countdown').textContent = fmtCountdown(minutesToNext * 60);
   }
 
-  // Fire a notification exactly once, right at the moment the next event flips to UPCOMING
+  // Fire a notification exactly once, right at the moment the next event flips to UPCOMING.
+  // Only works while this app/tab is open — see the note in the Notifications panel.
   const upcomingIndex = (eventIndex + 1) % 4;
   if (!isLiveNow && !(lastIsLive === false && lastLiveIndex === eventIndex)) {
     if (notifyFor[upcomingIndex]) fireNotification(upcomingIndex);
