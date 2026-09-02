@@ -265,7 +265,7 @@
   <h2>Notifications</h2>
   <div class="notify-panel">
     <button class="notify-enable-btn" id="notify-enable-btn">Enable notifications</button>
-    <div class="notify-status" id="notify-status">Pick which events you want to be notified about when they go live</div>
+    <div class="notify-status" id="notify-status">Pick which events you want a heads-up for before they go live</div>
     <div id="notify-rows"></div>
   </div>
 
@@ -341,7 +341,7 @@ function updateNotifyStatusUI() {
   if (perm === 'granted') {
     btn.disabled = true;
     btn.textContent = 'Notifications enabled ✓';
-    status.textContent = 'Pick which events you want to be notified about when they go live';
+    status.textContent = 'Pick which events you want a heads-up for before they go live';
   } else if (perm === 'denied') {
     btn.disabled = true;
     btn.textContent = 'Notifications blocked';
@@ -373,15 +373,26 @@ function buildNotifyRows() {
   });
 }
 
-function fireNotification(index) {
+async function fireNotification(index) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   const ev = EVENTS[index];
-  new Notification(`${ev.emoji} ${ev.name} is now LIVE!`, {
-    body: 'Grow a Chicken Fighter — jump in now',
+  const title = `${ev.emoji} ${ev.name} is coming up!`;
+  const options = {
+    body: 'Grow a Chicken Fighter — get ready, it goes live soon',
     icon: 'icon-192.png',
     badge: 'icon-192.png',
-    tag: 'gcf-event-live'
-  });
+    tag: 'gcf-event-upcoming'
+  };
+  // Android Chrome requires notifications to go through the Service Worker —
+  // calling `new Notification()` directly silently fails there (desktop-only).
+  if ('serviceWorker' in navigator) {
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      await reg.showNotification(title, options);
+      return;
+    } catch (err) { /* fall through to direct Notification below */ }
+  }
+  try { new Notification(title, options); } catch (err) { /* no-op */ }
 }
 
 function update() {
@@ -413,9 +424,10 @@ function update() {
     document.getElementById('upcoming-countdown').textContent = fmtCountdown(minutesToNext * 60);
   }
 
-  // Fire a notification exactly once, right at the moment an event flips to LIVE
-  if (isLiveNow && !(lastIsLive && lastLiveIndex === eventIndex)) {
-    if (notifyFor[eventIndex]) fireNotification(eventIndex);
+  // Fire a notification exactly once, right at the moment the next event flips to UPCOMING
+  const upcomingIndex = (eventIndex + 1) % 4;
+  if (!isLiveNow && !(lastIsLive === false && lastLiveIndex === eventIndex)) {
+    if (notifyFor[upcomingIndex]) fireNotification(upcomingIndex);
   }
   lastIsLive = isLiveNow;
   lastLiveIndex = eventIndex;
