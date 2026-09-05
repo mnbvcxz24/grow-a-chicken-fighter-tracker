@@ -1,531 +1,863 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Grow a Chicken Fighter - Event Tracker</title>
-<meta name="theme-color" content="#0f1117">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="GCF Tracker">
-<link rel="manifest" href="manifest.json">
-<link rel="icon" href="icon-192.png">
-<link rel="apple-touch-icon" href="icon-192.png">
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background: #0f1117;
-    color: #e8e8ec;
-    padding: 20px;
-    min-height: 100vh;
-  }
-  .wrap { max-width: 680px; margin: 0 auto; }
-  .clock {
-    text-align: center;
-    font-size: 14px;
-    color: #9a9aa5;
-    margin-bottom: 20px;
-    letter-spacing: 0.5px;
-  }
-  .clock strong { color: #e8e8ec; font-weight: 600; }
-  .install-btn {
-    display: none;
-    width: 100%;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    background: #1c2530;
-    color: #7ec8f5;
-    border: 1px solid #2d4a5a;
-    border-radius: 12px;
-    padding: 12px;
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-    margin-bottom: 16px;
-  }
-  .install-btn.show { display: flex; }
-  .install-hint {
-    display: none;
-    background: #1c2530;
-    border: 1px solid #2d4a5a;
-    border-radius: 12px;
-    padding: 14px 16px;
-    font-size: 13px;
-    color: #a9c9e8;
-    margin-bottom: 16px;
-    line-height: 1.5;
-  }
-  .install-hint.show { display: block; }
-  .live-card {
-    background: linear-gradient(135deg, #1a2e1a, #14231a);
-    border: 1px solid #2d5a2d;
-    border-radius: 16px;
-    padding: 24px;
-    margin-bottom: 12px;
-    position: relative;
-    overflow: hidden;
-  }
-  .badge {
-    display: inline-block;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    padding: 4px 10px;
-    border-radius: 20px;
-    margin-bottom: 10px;
-  }
-  .badge-live {
-    background: #2ecc71;
-    color: #06280f;
-  }
-  .badge-live::before {
-    content: "● ";
-  }
-  .badge-upcoming {
-    background: #f39c12;
-    color: #3a2604;
-  }
-  .event-name {
-    font-size: 28px;
-    font-weight: 700;
-    margin-bottom: 6px;
-  }
-  .event-sub {
-    font-size: 14px;
-    color: #a9c9a9;
-  }
-  .countdown {
-    font-size: 32px;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    margin-top: 10px;
-    color: #7ee8a8;
-  }
-  .upcoming-card {
-    background: #221a0f;
-    border: 1px solid #5a4a2d;
-    border-radius: 16px;
-    padding: 18px 24px;
-    margin-bottom: 20px;
-  }
-  .upcoming-card .event-name { font-size: 20px; color: #f5c877; }
-  .upcoming-card .countdown { font-size: 24px; color: #f5c877; }
-  .hidden { display: none; }
-  h2 {
-    font-size: 15px;
-    font-weight: 600;
-    color: #9a9aa5;
-    margin: 24px 0 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  .table-scroll {
-    overflow-x: auto;
-    border-radius: 12px;
-    background: #171922;
-  }
-  table {
-    width: 100%;
-    min-width: 380px;
-    border-collapse: collapse;
-    background: #171922;
-    border-radius: 12px;
-    font-size: 14px;
-  }
-  th {
-    text-align: left;
-    padding: 10px 14px;
-    color: #7a7a85;
-    font-weight: 600;
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    background: #1c1e28;
-    white-space: nowrap;
-  }
-  td {
-    padding: 10px 14px;
-    border-top: 1px solid #22242e;
-    white-space: nowrap;
-  }
-  @media (max-width: 400px) {
-    table { font-size: 13px; }
-    th, td { padding: 8px 10px; }
-  }
-  tr.row-live td { background: rgba(46, 204, 113, 0.08); }
-  tr.row-upcoming td { background: rgba(243, 156, 18, 0.06); }
-  .status-pill {
-    display: inline-block;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 2px 8px;
-    border-radius: 10px;
-  }
-  .status-pill.live { background: #2ecc71; color: #06280f; }
-  .status-pill.upcoming { background: #f39c12; color: #3a2604; }
-  .event-icon { margin-right: 6px; }
-  .notify-panel {
-    background: #171922;
-    border-radius: 12px;
-    padding: 16px 18px;
-    margin-top: 4px;
-  }
-  .notify-enable-btn {
-    width: 100%;
-    background: #2ecc71;
-    color: #06280f;
-    border: none;
-    border-radius: 10px;
-    padding: 12px;
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-    margin-bottom: 14px;
-  }
-  .notify-enable-btn:disabled {
-    background: #2a2d38;
-    color: #7a7a85;
-    cursor: default;
-  }
-  .notify-status {
-    font-size: 12px;
-    color: #7a7a85;
-    text-align: center;
-    margin-bottom: 14px;
-  }
-  .notify-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 0;
-    border-top: 1px solid #22242e;
-  }
-  .notify-row:first-of-type { border-top: none; }
-  .notify-row-label {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 15px;
-  }
-  .notify-emoji { font-size: 20px; }
-  .switch {
-    position: relative;
-    width: 44px;
-    height: 26px;
-    flex-shrink: 0;
-  }
-  .switch input { opacity: 0; width: 0; height: 0; }
-  .slider {
-    position: absolute;
-    cursor: pointer;
-    inset: 0;
-    background: #2a2d38;
-    border-radius: 26px;
-    transition: 0.2s;
-  }
-  .slider::before {
-    content: "";
-    position: absolute;
-    height: 20px; width: 20px;
-    left: 3px; bottom: 3px;
-    background: #e8e8ec;
-    border-radius: 50%;
-    transition: 0.2s;
-  }
-  input:checked + .slider { background: #2ecc71; }
-  input:checked + .slider::before { transform: translateX(18px); }
-  footer {
-    text-align: center;
-    font-size: 12px;
-    color: #5a5a65;
-    margin-top: 24px;
-  }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grow a Chicken Fighter - Event Tracker</title>
+  <meta name="theme-color" content="#0f1117">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="GCF Tracker">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #0f1117;
+      color: #e8e8ec;
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    .wrap {
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    .clock {
+      text-align: center;
+      font-size: 14px;
+      color: #9a9aa5;
+      margin-bottom: 20px;
+      letter-spacing: 0.5px;
+    }
+
+    .clock strong {
+      color: #e8e8ec;
+      font-weight: 600;
+    }
+
+    .install-btn {
+      display: none;
+      width: 100%;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: #1c2530;
+      color: #7ec8f5;
+      border: 1px solid #2d4a5a;
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-bottom: 16px;
+    }
+
+    .install-btn.show {
+      display: flex;
+    }
+
+    .install-hint {
+      display: none;
+      background: #1c2530;
+      border: 1px solid #2d4a5a;
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 13px;
+      color: #a9c9e8;
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+
+    .install-hint.show {
+      display: block;
+    }
+
+    .live-card {
+      background: linear-gradient(135deg, #1a2e1a, #14231a);
+      border: 1px solid #2d5a2d;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      margin-bottom: 10px;
+    }
+
+    .badge-live {
+      background: #2ecc71;
+      color: #06280f;
+    }
+
+    .badge-live::before {
+      content: "● ";
+    }
+
+    .badge-upcoming {
+      background: #f39c12;
+      color: #3a2604;
+    }
+
+    .event-name {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .event-sub {
+      font-size: 14px;
+      color: #a9c9a9;
+    }
+
+    .countdown {
+      font-size: 32px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      margin-top: 10px;
+      color: #7ee8a8;
+    }
+
+    .upcoming-card {
+      background: #221a0f;
+      border: 1px solid #5a4a2d;
+      border-radius: 16px;
+      padding: 18px 24px;
+      margin-bottom: 20px;
+    }
+
+    .upcoming-card .event-name {
+      font-size: 20px;
+      color: #f5c877;
+    }
+
+    .upcoming-card .countdown {
+      font-size: 24px;
+      color: #f5c877;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    h2 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #9a9aa5;
+      margin: 24px 0 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .table-scroll {
+      overflow-x: auto;
+      border-radius: 12px;
+      background: #171922;
+    }
+
+    table {
+      width: 100%;
+      min-width: 380px;
+      border-collapse: collapse;
+      background: #171922;
+      border-radius: 12px;
+      font-size: 14px;
+    }
+
+    th {
+      text-align: left;
+      padding: 10px 14px;
+      color: #7a7a85;
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      background: #1c1e28;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 10px 14px;
+      border-top: 1px solid #22242e;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 400px) {
+      table {
+        font-size: 13px;
+      }
+
+      th,
+      td {
+        padding: 8px 10px;
+      }
+    }
+
+    tr.row-live td {
+      background: rgba(46, 204, 113, 0.08);
+    }
+
+    tr.row-upcoming td {
+      background: rgba(243, 156, 18, 0.06);
+    }
+
+    .status-pill {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+
+    .status-pill.live {
+      background: #2ecc71;
+      color: #06280f;
+    }
+
+    .status-pill.upcoming {
+      background: #f39c12;
+      color: #3a2604;
+    }
+
+    .event-icon {
+      margin-right: 6px;
+    }
+
+    .notify-panel {
+      background: #171922;
+      border-radius: 12px;
+      padding: 16px 18px;
+      margin-top: 4px;
+    }
+
+    .notify-enable-btn {
+      width: 100%;
+      background: #2ecc71;
+      color: #06280f;
+      border: none;
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-bottom: 14px;
+    }
+
+    .notify-enable-btn:disabled {
+      background: #2a2d38;
+      color: #7a7a85;
+      cursor: default;
+    }
+
+    .notify-status {
+      font-size: 12px;
+      color: #7a7a85;
+      text-align: center;
+      margin-bottom: 14px;
+    }
+
+    .notify-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-top: 1px solid #22242e;
+    }
+
+    .notify-row:first-of-type {
+      border-top: none;
+    }
+
+    .notify-row-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 15px;
+    }
+
+    .notify-emoji {
+      font-size: 20px;
+    }
+
+    .switch {
+      position: relative;
+      width: 44px;
+      height: 26px;
+      flex-shrink: 0;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background: #2a2d38;
+      border-radius: 26px;
+      transition: 0.2s;
+    }
+
+    .slider::before {
+      content: "";
+      position: absolute;
+      height: 20px;
+      width: 20px;
+      left: 3px;
+      bottom: 3px;
+      background: #e8e8ec;
+      border-radius: 50%;
+      transition: 0.2s;
+    }
+
+    input:checked+.slider {
+      background: #2ecc71;
+    }
+
+    input:checked+.slider::before {
+      transform: translateX(18px);
+    }
+
+    .calc-panel {
+      background: #171922;
+      border-radius: 12px;
+      padding: 16px 18px;
+    }
+
+    .calc-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0;
+      border-top: 1px solid #22242e;
+    }
+
+    .calc-row:first-of-type {
+      border-top: none;
+      padding-top: 0;
+    }
+
+    .calc-input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+    }
+
+    .calc-input-wrap input[type="number"] {
+      width: 70px;
+      background: #0f1117;
+      border: 1px solid #2a2d38;
+      border-radius: 8px;
+      color: #e8e8ec;
+      padding: 8px 10px;
+      font-size: 14px;
+    }
+
+    .calc-input-wrap span {
+      font-size: 13px;
+      color: #9a9aa5;
+    }
+
+    .calc-remove-btn {
+      background: #2a1a1a;
+      color: #e88;
+      border: none;
+      border-radius: 8px;
+      width: 32px;
+      height: 32px;
+      font-size: 16px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .calc-result {
+      font-size: 12px;
+      color: #7ee8a8;
+      margin-top: 4px;
+      width: 100%;
+    }
+
+    .calc-add-btn {
+      width: 100%;
+      background: #1c2530;
+      color: #7ec8f5;
+      border: 1px solid #2d4a5a;
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 12px;
+    }
+
+    .calc-add-btn:disabled {
+      background: #1c1e28;
+      color: #5a5a65;
+      border-color: #2a2d38;
+      cursor: default;
+    }
+
+    .calc-total {
+      background: #14231a;
+      border: 1px solid #2d5a2d;
+      border-radius: 10px;
+      padding: 14px;
+      margin-top: 14px;
+      font-size: 13px;
+    }
+
+    .calc-total-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 0;
+    }
+
+    .calc-total-row strong {
+      color: #7ee8a8;
+    }
+
+    footer {
+      text-align: center;
+      font-size: 11px;
+      color: #5a5a65;
+      margin-top: 24px;
+      line-height: 1.6;
+      padding: 0 8px;
+    }
+  </style>
 </head>
+
 <body>
-<div class="wrap">
-  <div class="clock">Philippine time: <strong id="clock">--:--:--</strong></div>
+  <div class="wrap">
+    <div class="clock">Philippine time: <strong id="clock">--:--:--</strong></div>
 
-  <button class="install-btn" id="install-btn">⬇️ Install App</button>
-  <div class="install-hint" id="install-hint">📲 To install: tap the <strong>Share</strong> button in Safari, then <strong>"Add to Home Screen."</strong></div>
+    <button class="install-btn" id="install-btn">⬇️ Install App</button>
+    <div class="install-hint" id="install-hint">📲 To install: tap the <strong>Share</strong> button in Safari, then
+      <strong>"Add to Home Screen."</strong></div>
 
-  <div class="upcoming-card hidden" id="upcoming-card">
-    <span class="badge badge-upcoming">UPCOMING</span>
-    <div class="event-name" id="upcoming-event">--</div>
-    <div class="countdown" id="upcoming-countdown">--:--</div>
+    <div class="upcoming-card hidden" id="upcoming-card">
+      <span class="badge badge-upcoming">UPCOMING</span>
+      <div class="event-name" id="upcoming-event">--</div>
+      <div class="countdown" id="upcoming-countdown">--:--</div>
+    </div>
+
+    <div class="live-card" id="live-card">
+      <span class="badge badge-live">LIVE</span>
+      <div class="event-name" id="live-event">--</div>
+      <div class="event-sub">Ends at <span id="live-end">--</span></div>
+      <div class="countdown" id="live-countdown">--:--</div>
+    </div>
+
+    <h2>Next 1 hour schedule</h2>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>PH time</th>
+            <th>Status</th>
+            <th>Event</th>
+          </tr>
+        </thead>
+        <tbody id="schedule-body"></tbody>
+      </table>
+    </div>
+
+    <h2>Notifications</h2>
+    <div class="notify-panel">
+      <button class="notify-enable-btn" id="notify-enable-btn">Enable notifications</button>
+      <div class="notify-status" id="notify-status">Pick which events you want a heads-up for — works even if the app is
+        closed</div>
+      <div id="notify-rows"></div>
+    </div>
+
+    <h2>Egg lay calculator</h2>
+    <div class="calc-panel">
+      <div id="calc-rows"></div>
+      <button class="calc-add-btn" id="calc-add-btn">+ Add another chicken</button>
+      <div class="calc-total" id="calc-total"></div>
+    </div>
+
+    <footer>
+      Created by Albert Aldemita.<br>
+      This is an unofficial fan-made tool and is not affiliated with, endorsed by, or connected to Roblox Corporation or
+      the developers of Grow a Chicken Fighter. All game names, trademarks, and content belong to their respective
+      owners.
+    </footer>
   </div>
 
-  <div class="live-card" id="live-card">
-    <span class="badge badge-live">LIVE</span>
-    <div class="event-name" id="live-event">--</div>
-    <div class="event-sub">Ends at <span id="live-end">--</span></div>
-    <div class="countdown" id="live-countdown">--:--</div>
-  </div>
+  <script>
+    const EVENTS = [
+      { name: "UFO invasion", emoji: "🛸" },
+      { name: "Chicken boss", emoji: "🐔" },
+      { name: "Golden goose", emoji: "🐤" },
+      { name: "Hot egg", emoji: "🐣" }
+    ];
+    const ANCHOR_MIN = 17 * 60; // 5:00 PM anchor = start of UFO invasion
+    const CYCLE = 40; // minutes
+    const UPCOMING_OFFSET = 3; // minutes into the block before it switches to UPCOMING
 
-  <h2>Next 1 hour schedule</h2>
-  <div class="table-scroll">
-    <table>
-      <thead>
-        <tr><th>PH time</th><th>Status</th><th>Event</th></tr>
-      </thead>
-      <tbody id="schedule-body"></tbody>
-    </table>
-  </div>
+    // --- Real push notifications (work even when the app is fully closed) ---
+    // After deploying the Worker from DEPLOY-GUIDE.md, paste its URL here:
+    const PUSH_SERVER_URL = "PASTE_YOUR_WORKER_URL_HERE";
+    const VAPID_PUBLIC_KEY = "BI7orXvy9IeiHAVlMzQKPaWCA8LXanm9z8qo7nlRiDSKCi691L4cbTMx2iO87-BJvvQ5wLjqSqbFBsEBBAt3saA";
 
-  <h2>Notifications</h2>
-  <div class="notify-panel">
-    <button class="notify-enable-btn" id="notify-enable-btn">Enable notifications</button>
-    <div class="notify-status" id="notify-status">Pick which events you want a heads-up for — only works while the app is open</div>
-    <div id="notify-rows"></div>
-  </div>
+    // Notification picks per event index — kept in memory + synced to the push server
+    const notifyFor = [false, false, false, false];
 
-  <footer>Grow a Chicken Fighter event tracker &middot; cycle: UFO Invasion &rarr; Chicken Boss &rarr; Golden Goose &rarr; Hot Egg (10 min each)</footer>
-</div>
+    const phFormatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Manila', hour12: false,
+      hour: '2-digit', minute: '2-digit', second: '2-digit'
+    });
 
-<script>
-const EVENTS = [
-  { name: "UFO invasion", emoji: "🛸" },
-  { name: "Chicken boss", emoji: "🐔" },
-  { name: "Golden goose", emoji: "🐤" },
-  { name: "Hot egg", emoji: "🐣" }
-];
-const ANCHOR_MIN = 17 * 60; // 5:00 PM anchor = start of UFO invasion
-const CYCLE = 40; // minutes
-const UPCOMING_OFFSET = 3; // minutes into the block before it switches to UPCOMING
+    function getPHMinutes() {
+      const parts = phFormatter.formatToParts(new Date());
+      const obj = {};
+      parts.forEach(p => obj[p.type] = p.value);
+      const h = parseInt(obj.hour, 10) % 24;
+      const m = parseInt(obj.minute, 10);
+      const s = parseInt(obj.second, 10);
+      return h * 60 + m + s / 60;
+    }
 
-// In-memory only (resets on reload) — notification picks per event index.
-// Notifications only fire while this app/tab is open (not fully closed).
-const notifyFor = [false, false, false, false];
-let lastIsLive = null;
-let lastLiveIndex = null;
+    function fmtTimeFromMinutes(totalMin, withSeconds) {
+      totalMin = ((totalMin % 1440) + 1440) % 1440;
+      let h = Math.floor(totalMin / 60);
+      const m = Math.floor(totalMin % 60);
+      const s = Math.round((totalMin % 1) * 60);
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      h = h % 12; if (h === 0) h = 12;
+      if (withSeconds) {
+        return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')} ${ampm}`;
+      }
+      return `${h}:${String(m).padStart(2, '0')} ${ampm}`;
+    }
 
-const phFormatter = new Intl.DateTimeFormat('en-US', {
-  timeZone: 'Asia/Manila', hour12: false,
-  hour: '2-digit', minute: '2-digit', second: '2-digit'
-});
+    function fmtCountdown(totalSeconds) {
+      totalSeconds = Math.max(0, Math.round(totalSeconds));
+      const m = Math.floor(totalSeconds / 60);
+      const s = totalSeconds % 60;
+      return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
 
-function getPHMinutes() {
-  const parts = phFormatter.formatToParts(new Date());
-  const obj = {};
-  parts.forEach(p => obj[p.type] = p.value);
-  const h = parseInt(obj.hour, 10) % 24;
-  const m = parseInt(obj.minute, 10);
-  const s = parseInt(obj.second, 10);
-  return h * 60 + m + s / 60;
-}
+    function cyclePosAt(t) {
+      return (((t - ANCHOR_MIN) % CYCLE) + CYCLE) % CYCLE;
+    }
 
-function fmtTimeFromMinutes(totalMin, withSeconds) {
-  totalMin = ((totalMin % 1440) + 1440) % 1440;
-  let h = Math.floor(totalMin / 60);
-  const m = Math.floor(totalMin % 60);
-  const s = Math.round((totalMin % 1) * 60);
-  const ampm = h >= 12 ? 'PM' : 'AM';
-  h = h % 12; if (h === 0) h = 12;
-  if (withSeconds) {
-    return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')} ${ampm}`;
-  }
-  return `${h}:${String(m).padStart(2,'0')} ${ampm}`;
-}
+    function updateNotifyStatusUI() {
+      const btn = document.getElementById('notify-enable-btn');
+      const status = document.getElementById('notify-status');
+      const supported = 'Notification' in window;
+      if (!supported) {
+        btn.disabled = true;
+        btn.textContent = 'Notifications not supported here';
+        status.textContent = 'Your browser doesn\'t support push notifications';
+        return;
+      }
+      const perm = Notification.permission;
+      if (perm === 'granted') {
+        btn.disabled = true;
+        btn.textContent = 'Notifications enabled ✓';
+        status.textContent = 'Pick which events you want a heads-up for — works even if the app is closed';
+      } else if (perm === 'denied') {
+        btn.disabled = true;
+        btn.textContent = 'Notifications blocked';
+        status.textContent = 'You\'ve blocked notifications — enable them in your browser/site settings to use this';
+      } else {
+        btn.disabled = false;
+        btn.textContent = 'Enable notifications';
+        status.textContent = 'Turn this on first, then pick which events to be notified about';
+      }
+    }
 
-function fmtCountdown(totalSeconds) {
-  totalSeconds = Math.max(0, Math.round(totalSeconds));
-  const m = Math.floor(totalSeconds / 60);
-  const s = totalSeconds % 60;
-  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-}
+    function urlBase64ToUint8Array(base64String) {
+      const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+      const rawData = atob(base64);
+      return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+    }
 
-function cyclePosAt(t) {
-  return (((t - ANCHOR_MIN) % CYCLE) + CYCLE) % CYCLE;
-}
+    async function syncSubscription() {
+      if (!PUSH_SERVER_URL || PUSH_SERVER_URL.includes('PASTE_YOUR')) {
+        console.warn('Push server URL not configured yet — see DEPLOY-GUIDE.md');
+        return;
+      }
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+      if (Notification.permission !== 'granted') return;
 
-function updateNotifyStatusUI() {
-  const btn = document.getElementById('notify-enable-btn');
-  const status = document.getElementById('notify-status');
-  const supported = 'Notification' in window;
-  if (!supported) {
-    btn.disabled = true;
-    btn.textContent = 'Notifications not supported here';
-    status.textContent = 'Your browser doesn\'t support push notifications';
-    return;
-  }
-  const perm = Notification.permission;
-  if (perm === 'granted') {
-    btn.disabled = true;
-    btn.textContent = 'Notifications enabled ✓';
-    status.textContent = 'Pick which events you want a heads-up for — only works while the app is open';
-  } else if (perm === 'denied') {
-    btn.disabled = true;
-    btn.textContent = 'Notifications blocked';
-    status.textContent = 'You\'ve blocked notifications — enable them in your browser/site settings to use this';
-  } else {
-    btn.disabled = false;
-    btn.textContent = 'Enable notifications';
-    status.textContent = 'Turn this on first, then pick which events to be notified about';
-  }
-}
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        let sub = await reg.pushManager.getSubscription();
+        if (!sub) {
+          sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+          });
+        }
+        const anySelected = notifyFor.some(Boolean);
+        if (anySelected) {
+          await fetch(`${PUSH_SERVER_URL}/subscribe`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ subscription: sub, notifyFor })
+          });
+        } else {
+          await fetch(`${PUSH_SERVER_URL}/unsubscribe`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ endpoint: sub.endpoint })
+          });
+        }
+      } catch (err) {
+        console.warn('Push sync failed:', err);
+      }
+    }
 
-function buildNotifyRows() {
-  const container = document.getElementById('notify-rows');
-  container.innerHTML = '';
-  EVENTS.forEach((ev, i) => {
-    const row = document.createElement('div');
-    row.className = 'notify-row';
-    row.innerHTML = `
+    function buildNotifyRows() {
+      const container = document.getElementById('notify-rows');
+      container.innerHTML = '';
+      EVENTS.forEach((ev, i) => {
+        const row = document.createElement('div');
+        row.className = 'notify-row';
+        row.innerHTML = `
       <div class="notify-row-label"><span class="notify-emoji">${ev.emoji}</span>${ev.name}</div>
       <label class="switch">
         <input type="checkbox" id="notify-toggle-${i}">
         <span class="slider"></span>
       </label>
     `;
-    container.appendChild(row);
-    document.getElementById(`notify-toggle-${i}`).addEventListener('change', (e) => {
-      notifyFor[i] = e.target.checked;
+        container.appendChild(row);
+        document.getElementById(`notify-toggle-${i}`).addEventListener('change', (e) => {
+          notifyFor[i] = e.target.checked;
+          syncSubscription();
+        });
+      });
+    }
+
+    function update() {
+      const t = getPHMinutes();
+      document.getElementById('clock').textContent = fmtTimeFromMinutes(t, true);
+
+      const pos = cyclePosAt(t);
+      const eventIndex = Math.floor(pos / 10) % 4;
+      const posInBlock = pos % 10;
+      const isLiveNow = posInBlock < UPCOMING_OFFSET;
+
+      const liveEvent = EVENTS[eventIndex];
+      const nextEvent = EVENTS[(eventIndex + 1) % 4];
+      const liveCard = document.getElementById('live-card');
+      const upcomingCard = document.getElementById('upcoming-card');
+
+      if (isLiveNow) {
+        liveCard.classList.remove('hidden');
+        const minutesToLiveEnd = UPCOMING_OFFSET - posInBlock;
+        document.getElementById('live-event').textContent = `${liveEvent.emoji} ${liveEvent.name}`;
+        document.getElementById('live-countdown').textContent = fmtCountdown(minutesToLiveEnd * 60);
+        document.getElementById('live-end').textContent = fmtTimeFromMinutes(t + minutesToLiveEnd, false);
+        upcomingCard.classList.add('hidden');
+      } else {
+        liveCard.classList.add('hidden');
+        upcomingCard.classList.remove('hidden');
+        document.getElementById('upcoming-event').textContent = `${nextEvent.emoji} ${nextEvent.name}`;
+        const minutesToNext = 10 - posInBlock;
+        document.getElementById('upcoming-countdown').textContent = fmtCountdown(minutesToNext * 60);
+      }
+      // Notifications are sent server-side by the Worker now — they'll arrive
+      // even when this page/app is fully closed, so nothing to fire from here.
+
+      buildSchedule(t);
+    }
+
+    function buildSchedule(t) {
+      const windowEnd = t + 60;
+
+      let boundaries = [];
+      let firstBoundary = Math.floor((t - ANCHOR_MIN) / 10) * 10 + ANCHOR_MIN;
+      for (let b = firstBoundary; b <= t + 60 + 10; b += 10) {
+        const pos = cyclePosAt(b);
+        const idx = Math.floor(pos / 10) % 4;
+        boundaries.push({ min: b, type: 'live', event: EVENTS[idx] });
+        const upcomingMin = b + UPCOMING_OFFSET;
+        const nextIdx = (idx + 1) % 4;
+        boundaries.push({ min: upcomingMin, type: 'upcoming', event: EVENTS[nextIdx] });
+      }
+
+      boundaries = boundaries.filter(b => b.min >= t - 0.001 && b.min <= windowEnd).sort((a, b) => a.min - b.min);
+
+      const tbody = document.getElementById('schedule-body');
+      tbody.innerHTML = '';
+      boundaries.forEach(b => {
+        const tr = document.createElement('tr');
+        tr.className = b.type === 'live' ? 'row-live' : 'row-upcoming';
+        const pillClass = b.type === 'live' ? 'live' : 'upcoming';
+        const pillLabel = b.type === 'live' ? 'LIVE' : 'UPCOMING';
+        tr.innerHTML = `<td>${fmtTimeFromMinutes(b.min, false)}</td><td><span class="status-pill ${pillClass}">${pillLabel}</span></td><td>${b.event.emoji} ${b.event.name}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // --- Egg lay calculator ---
+    let calcRowCount = 0;
+    const MAX_SECONDS = 600; // eggs can lay up to every 10 minutes
+
+    function fmtEggCount(n) {
+      return n.toLocaleString('en-US', { maximumFractionDigits: 1 });
+    }
+
+    const MAX_CALC_ROWS = 2;
+
+    function addCalcRow(defaultSeconds) {
+      if (document.querySelectorAll('#calc-rows .calc-row').length >= MAX_CALC_ROWS) return;
+      calcRowCount++;
+      const id = calcRowCount;
+      const container = document.getElementById('calc-rows');
+      const row = document.createElement('div');
+      row.className = 'calc-row';
+      row.id = `calc-row-${id}`;
+      row.innerHTML = `
+    <div class="calc-input-wrap">
+      <span>🐣</span>
+      <input type="number" id="calc-seconds-${id}" min="1" max="${MAX_SECONDS}" value="${defaultSeconds}">
+      <span>sec / egg</span>
+    </div>
+    <button class="calc-remove-btn" data-id="${id}">✕</button>
+    <div class="calc-result" id="calc-result-${id}"></div>
+  `;
+      container.appendChild(row);
+
+      const input = document.getElementById(`calc-seconds-${id}`);
+      input.addEventListener('input', () => {
+        let v = parseFloat(input.value);
+        if (isNaN(v) || v < 1) v = 1;
+        if (v > MAX_SECONDS) v = MAX_SECONDS;
+        input.value = v;
+        updateCalc();
+      });
+
+      row.querySelector('.calc-remove-btn').addEventListener('click', () => {
+        row.remove();
+        updateCalc();
+      });
+
+      updateCalc();
+    }
+
+    function updateCalc() {
+      const rows = document.querySelectorAll('#calc-rows .calc-row');
+      let totalPerHour = 0;
+
+      const addBtn = document.getElementById('calc-add-btn');
+      if (rows.length >= MAX_CALC_ROWS) {
+        addBtn.disabled = true;
+        addBtn.textContent = `Limit reached (max ${MAX_CALC_ROWS} chickens)`;
+      } else {
+        addBtn.disabled = false;
+        addBtn.textContent = '+ Add another chicken';
+      }
+
+      rows.forEach((row) => {
+        const id = row.id.split('-').pop();
+        const input = document.getElementById(`calc-seconds-${id}`);
+        const seconds = parseFloat(input.value) || 1;
+        const perHour = 3600 / seconds;
+        totalPerHour += perHour;
+        document.getElementById(`calc-result-${id}`).textContent =
+          `${fmtEggCount(perHour)}/hr · ${fmtEggCount(perHour * 12)}/12hr · ${fmtEggCount(perHour * 24)}/day`;
+      });
+
+      const totalEl = document.getElementById('calc-total');
+      if (rows.length > 1) {
+        totalEl.innerHTML = `
+      <div class="calc-total-row"><span>Combined per hour</span><strong>${fmtEggCount(totalPerHour)} eggs</strong></div>
+      <div class="calc-total-row"><span>Combined per 12 hours</span><strong>${fmtEggCount(totalPerHour * 12)} eggs</strong></div>
+      <div class="calc-total-row"><span>Combined per day</span><strong>${fmtEggCount(totalPerHour * 24)} eggs</strong></div>
+    `;
+      } else {
+        totalEl.innerHTML = '';
+      }
+    }
+
+    document.getElementById('calc-add-btn').addEventListener('click', () => addCalcRow(24));
+    addCalcRow(24);
+
+    buildNotifyRows();
+    updateNotifyStatusUI();
+
+    document.getElementById('notify-enable-btn').addEventListener('click', () => {
+      if (!('Notification' in window)) return;
+      Notification.requestPermission().then((perm) => {
+        updateNotifyStatusUI();
+        if (perm === 'granted') syncSubscription();
+      });
     });
-  });
-}
 
-async function fireNotification(index) {
-  if (!('Notification' in window) || Notification.permission !== 'granted') return;
-  const ev = EVENTS[index];
-  const title = `${ev.emoji} ${ev.name} is coming up!`;
-  const options = {
-    body: 'Grow a Chicken Fighter — get ready, it goes live soon',
-    icon: 'icon-192.png',
-    badge: 'icon-192.png',
-    tag: 'gcf-event-upcoming'
-  };
-  // Android Chrome requires notifications to go through the Service Worker —
-  // calling `new Notification()` directly silently fails there (desktop-only).
-  if ('serviceWorker' in navigator) {
-    try {
-      const reg = await navigator.serviceWorker.ready;
-      await reg.showNotification(title, options);
-      return;
-    } catch (err) { /* fall through to direct Notification below */ }
-  }
-  try { new Notification(title, options); } catch (err) { /* no-op */ }
-}
+    update();
+    setInterval(update, 1000);
 
-function update() {
-  const t = getPHMinutes();
-  document.getElementById('clock').textContent = fmtTimeFromMinutes(t, true);
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js')
+          .then(() => {
+            if (Notification.permission === 'granted') syncSubscription();
+          })
+          .catch(() => { });
+      });
+    }
 
-  const pos = cyclePosAt(t);
-  const eventIndex = Math.floor(pos / 10) % 4;
-  const posInBlock = pos % 10;
-  const isLiveNow = posInBlock < UPCOMING_OFFSET;
+    // --- Install app button ---
+    let deferredInstallPrompt = null;
+    const installBtn = document.getElementById('install-btn');
+    const installHint = document.getElementById('install-hint');
 
-  const liveEvent = EVENTS[eventIndex];
-  const nextEvent = EVENTS[(eventIndex + 1) % 4];
-  const liveCard = document.getElementById('live-card');
-  const upcomingCard = document.getElementById('upcoming-card');
+    function isStandalone() {
+      return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    }
 
-  if (isLiveNow) {
-    liveCard.classList.remove('hidden');
-    const minutesToLiveEnd = UPCOMING_OFFSET - posInBlock;
-    document.getElementById('live-event').textContent = `${liveEvent.emoji} ${liveEvent.name}`;
-    document.getElementById('live-countdown').textContent = fmtCountdown(minutesToLiveEnd * 60);
-    document.getElementById('live-end').textContent = fmtTimeFromMinutes(t + minutesToLiveEnd, false);
-    upcomingCard.classList.add('hidden');
-  } else {
-    liveCard.classList.add('hidden');
-    upcomingCard.classList.remove('hidden');
-    document.getElementById('upcoming-event').textContent = `${nextEvent.emoji} ${nextEvent.name}`;
-    const minutesToNext = 10 - posInBlock;
-    document.getElementById('upcoming-countdown').textContent = fmtCountdown(minutesToNext * 60);
-  }
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      if (!isStandalone()) installBtn.classList.add('show');
+    });
 
-  // Fire a notification exactly once, right at the moment the next event flips to UPCOMING.
-  // Only works while this app/tab is open — see the note in the Notifications panel.
-  const upcomingIndex = (eventIndex + 1) % 4;
-  if (!isLiveNow && !(lastIsLive === false && lastLiveIndex === eventIndex)) {
-    if (notifyFor[upcomingIndex]) fireNotification(upcomingIndex);
-  }
-  lastIsLive = isLiveNow;
-  lastLiveIndex = eventIndex;
+    installBtn.addEventListener('click', async () => {
+      if (!deferredInstallPrompt) return;
+      deferredInstallPrompt.prompt();
+      await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
+      installBtn.classList.remove('show');
+    });
 
-  buildSchedule(t);
-}
+    window.addEventListener('appinstalled', () => {
+      installBtn.classList.remove('show');
+    });
 
-function buildSchedule(t) {
-  const windowEnd = t + 60;
-
-  let boundaries = [];
-  let firstBoundary = Math.floor((t - ANCHOR_MIN) / 10) * 10 + ANCHOR_MIN;
-  for (let b = firstBoundary; b <= t + 60 + 10; b += 10) {
-    const pos = cyclePosAt(b);
-    const idx = Math.floor(pos / 10) % 4;
-    boundaries.push({ min: b, type: 'live', event: EVENTS[idx] });
-    const upcomingMin = b + UPCOMING_OFFSET;
-    const nextIdx = (idx + 1) % 4;
-    boundaries.push({ min: upcomingMin, type: 'upcoming', event: EVENTS[nextIdx] });
-  }
-
-  boundaries = boundaries.filter(b => b.min >= t - 0.001 && b.min <= windowEnd).sort((a,b) => a.min - b.min);
-
-  const tbody = document.getElementById('schedule-body');
-  tbody.innerHTML = '';
-  boundaries.forEach(b => {
-    const tr = document.createElement('tr');
-    tr.className = b.type === 'live' ? 'row-live' : 'row-upcoming';
-    const pillClass = b.type === 'live' ? 'live' : 'upcoming';
-    const pillLabel = b.type === 'live' ? 'LIVE' : 'UPCOMING';
-    tr.innerHTML = `<td>${fmtTimeFromMinutes(b.min, false)}</td><td><span class="status-pill ${pillClass}">${pillLabel}</span></td><td>${b.event.emoji} ${b.event.name}</td>`;
-    tbody.appendChild(tr);
-  });
-}
-
-buildNotifyRows();
-updateNotifyStatusUI();
-document.getElementById('notify-enable-btn').addEventListener('click', () => {
-  if (!('Notification' in window)) return;
-  Notification.requestPermission().then(() => updateNotifyStatusUI());
-});
-
-update();
-setInterval(update, 1000);
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('service-worker.js').catch(() => {});
-  });
-}
-
-// --- Install app button ---
-let deferredInstallPrompt = null;
-const installBtn = document.getElementById('install-btn');
-const installHint = document.getElementById('install-hint');
-
-function isStandalone() {
-  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-}
-
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  deferredInstallPrompt = e;
-  if (!isStandalone()) installBtn.classList.add('show');
-});
-
-installBtn.addEventListener('click', async () => {
-  if (!deferredInstallPrompt) return;
-  deferredInstallPrompt.prompt();
-  await deferredInstallPrompt.userChoice;
-  deferredInstallPrompt = null;
-  installBtn.classList.remove('show');
-});
-
-window.addEventListener('appinstalled', () => {
-  installBtn.classList.remove('show');
-});
-
-// iOS Safari has no beforeinstallprompt — show manual instructions instead
-const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-if (isIOS && !isStandalone()) {
-  installHint.classList.add('show');
-}
-</script>
+    // iOS Safari has no beforeinstallprompt — show manual instructions instead
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    if (isIOS && !isStandalone()) {
+      installHint.classList.add('show');
+    }
+  </script>
 </body>
+
 </html>

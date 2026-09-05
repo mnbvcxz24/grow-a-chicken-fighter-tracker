@@ -38,6 +38,24 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
+// Fires when the push server sends a message — works even if the app
+// is fully closed, because the OS wakes the service worker for this.
+self.addEventListener('push', (event) => {
+  let data = { title: '🐔 Grow a Chicken Fighter', body: 'An event update is here.' };
+  try {
+    if (event.data) data = event.data.json();
+  } catch (err) { /* fall back to default text above */ }
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: 'icon-192.png',
+      badge: 'icon-192.png',
+      tag: 'gcf-event-upcoming'
+    })
+  );
+});
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
