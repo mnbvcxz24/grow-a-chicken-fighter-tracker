@@ -3,7 +3,7 @@
 A live, installable web app that tracks the rotating world-event cycle for the
 Roblox game **Grow a Chicken Fighter**, using Philippine (PH) time.
 
-**🛸 UFO Invasion → 🐔 Chicken Boss → 🐤 Golden Goose → 🐣 Hot Egg** — repeats every 40 minutes.
+**🛸 UFO Invasion → 🐔 Chicken Boss → 🦖 Jurassic Event → 🐤 Golden Goose → 🐣 Hot Egg** — repeats every 50 minutes.
 
 ---
 
@@ -52,6 +52,7 @@ const PUSH_SERVER_URL = "https://your-worker-url.workers.dev";
 
 - No build step — plain HTML/CSS/JS, works as-is
 - Timezone handling uses `Intl.DateTimeFormat` (not the unreliable `toLocaleString → new Date()` round-trip)
+- Event timing is calculated from a fixed absolute anchor instant (`ANCHOR_EPOCH_MIN` in `index.html`), not "minutes since midnight" — this matters because the 50-minute cycle doesn't divide evenly into a 24-hour day, so a day-relative anchor would drift at midnight. If the event order or timing is ever recalibrated, update `ANCHOR_EPOCH_MIN` in both `index.html` and `gcf-push-worker-backend/src/index.js` to match
 - Service worker caches all assets for offline use
 
 ---
