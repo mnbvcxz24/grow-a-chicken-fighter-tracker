@@ -4,25 +4,18 @@ import webpush from 'web-push';
 const EVENTS = [
   { name: "UFO invasion", emoji: "🛸" },
   { name: "Chicken boss", emoji: "🐔" },
+  { name: "Jurassic event", emoji: "🦖" },
   { name: "Golden goose", emoji: "🐤" },
-  { name: "Hot egg", emoji: "🍳" }
+  { name: "Hot egg", emoji: "🐣" }
 ];
-const ANCHOR_MIN = 17 * 60; // 5:00 PM PH time = start of UFO invasion
-const CYCLE = 40;
+// Same fixed reference instant as the app: Sept 13, 2026, 10:40 AM PH = 02:40 UTC.
+// Epoch-based (not "minutes since PH midnight") because 50 doesn't divide 1440 evenly.
+const ANCHOR_EPOCH_MIN = Date.UTC(2026, 8, 13, 2, 40, 0) / 60000;
+const CYCLE = EVENTS.length * 10; // minutes — 50 with 5 events
 const UPCOMING_OFFSET = 3; // minutes into the block before it flips to UPCOMING
 
-function cyclePosAt(t) {
-  return (((t - ANCHOR_MIN) % CYCLE) + CYCLE) % CYCLE;
-}
-
-function getPHMinutesNow() {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Asia/Manila', hour12: false,
-    hour: '2-digit', minute: '2-digit'
-  }).formatToParts(new Date());
-  const obj = {};
-  parts.forEach(p => obj[p.type] = p.value);
-  return parseInt(obj.hour, 10) * 60 + parseInt(obj.minute, 10);
+function cyclePosAt(epochMin) {
+  return (((epochMin - ANCHOR_EPOCH_MIN) % CYCLE) + CYCLE) % CYCLE;
 }
 
 async function handleSubscribe(request, env) {
@@ -53,15 +46,15 @@ function corsHeaders() {
 }
 
 async function runScheduledCheck(env) {
-  const t = getPHMinutesNow();
+  const t = Date.now() / 60000; // epoch minutes — timezone-agnostic, no PH conversion needed
   const pos = cyclePosAt(t);
-  const eventIndex = Math.floor(pos / 10) % 4;
+  const eventIndex = Math.floor(pos / 10) % EVENTS.length;
   const posInBlock = pos % 10;
 
   // Only act in the exact minute the block flips into UPCOMING
   if (Math.floor(posInBlock) !== UPCOMING_OFFSET) return;
 
-  const upcomingIndex = (eventIndex + 1) % 4;
+  const upcomingIndex = (eventIndex + 1) % EVENTS.length;
   const ev = EVENTS[upcomingIndex];
 
   webpush.setVapidDetails(

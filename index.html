@@ -500,6 +500,8 @@
     </div>
 
     <footer>
+      Grow a Chicken Fighter event tracker &middot; cycle: UFO Invasion &rarr; Chicken Boss &rarr; Jurassic Event &rarr;
+      Golden Goose &rarr; Hot Egg (10 min each)<br><br>
       Created by Albert Aldemita with Claude AI.<br>
       This is an unofficial fan-made tool and is not affiliated with, endorsed by, or connected to Roblox Corporation or
       the developers of Grow a Chicken Fighter. All game names, trademarks, and content belong to their respective
@@ -511,11 +513,17 @@
     const EVENTS = [
       { name: "UFO invasion", emoji: "🛸" },
       { name: "Chicken boss", emoji: "🐔" },
+      { name: "Jurassic event", emoji: "🦖" },
       { name: "Golden goose", emoji: "🐤" },
       { name: "Hot egg", emoji: "🐣" }
     ];
-    const ANCHOR_MIN = 17 * 60; // 5:00 PM anchor = start of UFO invasion
-    const CYCLE = 40; // minutes
+    // Fixed reference instant: Sept 13, 2026, 10:40 AM PH time = 02:40 UTC (PH is UTC+8, no DST).
+    // Calibrated against the real in-game state at that moment (UFO invasion block start).
+    // Using an absolute epoch anchor (not "minutes since midnight") matters now: with 5
+    // events at 10 min each, the cycle is 50 minutes, and 1440 (a day) isn't a multiple
+    // of 50 — so a day-relative anchor would drift/glitch at midnight. Epoch time doesn't.
+    const ANCHOR_EPOCH_MIN = Date.UTC(2026, 8, 13, 2, 40, 0) / 60000;
+    const CYCLE = EVENTS.length * 10; // minutes — 50 with 5 events
     const UPCOMING_OFFSET = 3; // minutes into the block before it switches to UPCOMING
 
     // --- Real push notifications (work even when the app is fully closed) ---
@@ -524,34 +532,31 @@
     const VAPID_PUBLIC_KEY = "BI7orXvy9IeiHAVlMzQKPaWCA8LXanm9z8qo7nlRiDSKCi691L4cbTMx2iO87-BJvvQ5wLjqSqbFBsEBBAt3saA";
 
     // Notification picks per event index — kept in memory + synced to the push server
-    const notifyFor = [false, false, false, false];
+    const notifyFor = EVENTS.map(() => false);
 
     const phFormatter = new Intl.DateTimeFormat('en-US', {
       timeZone: 'Asia/Manila', hour12: false,
       hour: '2-digit', minute: '2-digit', second: '2-digit'
     });
 
-    function getPHMinutes() {
-      const parts = phFormatter.formatToParts(new Date());
+    function fmtTimeFromDate(dateObj, withSeconds) {
+      const parts = phFormatter.formatToParts(dateObj);
       const obj = {};
       parts.forEach(p => obj[p.type] = p.value);
-      const h = parseInt(obj.hour, 10) % 24;
-      const m = parseInt(obj.minute, 10);
-      const s = parseInt(obj.second, 10);
-      return h * 60 + m + s / 60;
-    }
-
-    function fmtTimeFromMinutes(totalMin, withSeconds) {
-      totalMin = ((totalMin % 1440) + 1440) % 1440;
-      let h = Math.floor(totalMin / 60);
-      const m = Math.floor(totalMin % 60);
-      const s = Math.round((totalMin % 1) * 60);
+      let h = parseInt(obj.hour, 10) % 24;
+      const m = obj.minute;
+      const s = obj.second;
       const ampm = h >= 12 ? 'PM' : 'AM';
       h = h % 12; if (h === 0) h = 12;
-      if (withSeconds) {
-        return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')} ${ampm}`;
-      }
-      return `${h}:${String(m).padStart(2, '0')} ${ampm}`;
+      return withSeconds ? `${h}:${m}:${s} ${ampm}` : `${h}:${m} ${ampm}`;
+    }
+
+    function dateFromEpochMin(epochMin) {
+      return new Date(Math.round(epochMin * 60000));
+    }
+
+    function getNowEpochMin() {
+      return Date.now() / 60000;
     }
 
     function fmtCountdown(totalSeconds) {
@@ -561,8 +566,8 @@
       return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
     }
 
-    function cyclePosAt(t) {
-      return (((t - ANCHOR_MIN) % CYCLE) + CYCLE) % CYCLE;
+    function cyclePosAt(epochMin) {
+      return (((epochMin - ANCHOR_EPOCH_MIN) % CYCLE) + CYCLE) % CYCLE;
     }
 
     function updateNotifyStatusUI() {
@@ -656,16 +661,16 @@
     }
 
     function update() {
-      const t = getPHMinutes();
-      document.getElementById('clock').textContent = fmtTimeFromMinutes(t, true);
+      const t = getNowEpochMin();
+      document.getElementById('clock').textContent = fmtTimeFromDate(new Date(), true);
 
       const pos = cyclePosAt(t);
-      const eventIndex = Math.floor(pos / 10) % 4;
+      const eventIndex = Math.floor(pos / 10) % EVENTS.length;
       const posInBlock = pos % 10;
       const isLiveNow = posInBlock < UPCOMING_OFFSET;
 
       const liveEvent = EVENTS[eventIndex];
-      const nextEvent = EVENTS[(eventIndex + 1) % 4];
+      const nextEvent = EVENTS[(eventIndex + 1) % EVENTS.length];
       const liveCard = document.getElementById('live-card');
       const upcomingCard = document.getElementById('upcoming-card');
 
@@ -674,7 +679,7 @@
         const minutesToLiveEnd = UPCOMING_OFFSET - posInBlock;
         document.getElementById('live-event').textContent = `${liveEvent.emoji} ${liveEvent.name}`;
         document.getElementById('live-countdown').textContent = fmtCountdown(minutesToLiveEnd * 60);
-        document.getElementById('live-end').textContent = fmtTimeFromMinutes(t + minutesToLiveEnd, false);
+        document.getElementById('live-end').textContent = fmtTimeFromDate(dateFromEpochMin(t + minutesToLiveEnd), false);
         upcomingCard.classList.add('hidden');
       } else {
         liveCard.classList.add('hidden');
@@ -693,13 +698,13 @@
       const windowEnd = t + 60;
 
       let boundaries = [];
-      let firstBoundary = Math.floor((t - ANCHOR_MIN) / 10) * 10 + ANCHOR_MIN;
+      let firstBoundary = Math.floor((t - ANCHOR_EPOCH_MIN) / 10) * 10 + ANCHOR_EPOCH_MIN;
       for (let b = firstBoundary; b <= t + 60 + 10; b += 10) {
         const pos = cyclePosAt(b);
-        const idx = Math.floor(pos / 10) % 4;
+        const idx = Math.floor(pos / 10) % EVENTS.length;
         boundaries.push({ min: b, type: 'live', event: EVENTS[idx] });
         const upcomingMin = b + UPCOMING_OFFSET;
-        const nextIdx = (idx + 1) % 4;
+        const nextIdx = (idx + 1) % EVENTS.length;
         boundaries.push({ min: upcomingMin, type: 'upcoming', event: EVENTS[nextIdx] });
       }
 
@@ -712,7 +717,7 @@
         tr.className = b.type === 'live' ? 'row-live' : 'row-upcoming';
         const pillClass = b.type === 'live' ? 'live' : 'upcoming';
         const pillLabel = b.type === 'live' ? 'LIVE' : 'UPCOMING';
-        tr.innerHTML = `<td>${fmtTimeFromMinutes(b.min, false)}</td><td><span class="status-pill ${pillClass}">${pillLabel}</span></td><td>${b.event.emoji} ${b.event.name}</td>`;
+        tr.innerHTML = `<td>${fmtTimeFromDate(dateFromEpochMin(b.min), false)}</td><td><span class="status-pill ${pillClass}">${pillLabel}</span></td><td>${b.event.emoji} ${b.event.name}</td>`;
         tbody.appendChild(tr);
       });
     }
